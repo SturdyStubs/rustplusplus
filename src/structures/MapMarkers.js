@@ -819,6 +819,31 @@ class MapMarkers {
         return false;
     }
 
+    getMapSide(x, y, mapSize) {
+        if (x < 0) {
+            return this.client.intlGet(this.rustplus.guildId, 'mapSideWest');
+        }
+        else if (x > mapSize) {
+            return this.client.intlGet(this.rustplus.guildId, 'mapSideEast');
+        }
+        else if (y < 0) {
+            return this.client.intlGet(this.rustplus.guildId, 'mapSideSouth');
+        }
+        else if (y > mapSize) {
+            return this.client.intlGet(this.rustplus.guildId, 'mapSideNorth');
+        }
+
+        const distances = [
+            { side: this.client.intlGet(this.rustplus.guildId, 'mapSideWest'), value: x },
+            { side: this.client.intlGet(this.rustplus.guildId, 'mapSideEast'), value: mapSize - x },
+            { side: this.client.intlGet(this.rustplus.guildId, 'mapSideSouth'), value: y },
+            { side: this.client.intlGet(this.rustplus.guildId, 'mapSideNorth'), value: mapSize - y }
+        ];
+
+        distances.sort((a, b) => a.value - b.value);
+        return distances[0].side;
+    }
+
     updateDeepSeas(mapMarkers) {
         const incoming = mapMarkers.markers.filter(marker => this.isDeepSeaMarker(marker));
         const incomingIds = incoming.map(marker => this.getDeepSeaIdentity(marker));
@@ -834,9 +859,26 @@ class MapMarkers {
             marker.location = pos;
             marker._deepSeaIdentity = this.getDeepSeaIdentity(marker);
             this.deepSeas.push(marker);
+
+            const side = this.getMapSide(marker.x, marker.y, mapSize);
+            this.rustplus.sendEvent(
+                this.rustplus.notificationSettings.deepSeaDetectedSetting,
+                this.client.intlGet(this.rustplus.guildId, 'deepSeaOpenedAt', {
+                    side: side,
+                    location: pos.string
+                }),
+                null,
+                Constants.COLOR_TRAVELING_VENDOR_LOCATED_AT);
         }
 
         for (const marker of leftMarkers) {
+            this.rustplus.sendEvent(
+                this.rustplus.notificationSettings.deepSeaLeftSetting,
+                this.client.intlGet(this.rustplus.guildId, 'deepSeaClosedAt', {
+                    location: marker.location.string
+                }),
+                null,
+                Constants.COLOR_TRAVELING_VENDOR_LEFT_MAP);
             this.deepSeas = this.deepSeas.filter(e => e._deepSeaIdentity !== marker._deepSeaIdentity);
         }
 
