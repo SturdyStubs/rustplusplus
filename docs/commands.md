@@ -353,6 +353,7 @@ In-Game Command | Description
 [**craft**](commands.md#craft-ingame) | Display the cost to craft an item.
 [**death/deaths**](commands.md#deathdeaths) | Get recent death events.
 [**decay**](commands.md#decay-ingame) | Display the decay time of an item.
+[**deepsea**](commands.md#deepsea) | Get Deep Sea status (open time or approximate down time).
 [**events**](commands.md#events) | Get recent events.
 [**heli**](commands.md#heli) | Get information about Patrol Helicopter (Location, time since last downed, time since last on map).
 [**large**](commands.md#large) | Get information about Large Oil Rig (Time till crate unlocks, time since last trigger).
@@ -455,6 +456,12 @@ In-Game Command | Description
 <br>Command: `!decay armored wall 450`
 
 ![In-Game Command decay Image](images/ingame_commands/decay_ingame.png)
+
+
+## **deepsea**
+
+> **Get Deep Sea status (how long it has been open, or approximately how long it has been down).**
+<br>Command: `!deepsea`
 
 
 ## **events**

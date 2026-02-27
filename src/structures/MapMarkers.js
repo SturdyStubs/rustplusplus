@@ -38,7 +38,8 @@ class MapMarkers {
             Crate: 6,
             GenericRadius: 7,
             PatrolHelicopter: 8,
-            TravelingVendor: 9
+            TravelingVendor: 9,
+            DeepSea: 10
         }
 
         this._players = [];
@@ -48,6 +49,7 @@ class MapMarkers {
         this._genericRadiuses = [];
         this._patrolHelicopters = [];
         this._travelingVendors = [];
+        this._deepSeas = [];
 
         /* Timers */
         this.cargoShipEgressTimers = new Object();
@@ -64,6 +66,8 @@ class MapMarkers {
         this.timeSincePatrolHelicopterWasOnMap = null;
         this.timeSincePatrolHelicopterWasDestroyed = null;
         this.timeSinceTravelingVendorWasOnMap = null;
+        this.timeSinceDeepSeaWasOnMap = null;
+        this.timeSinceDeepSeaOpened = null;
 
         /* Event location */
         this.patrolHelicopterDestroyedLocation = null;
@@ -97,6 +101,8 @@ class MapMarkers {
     set patrolHelicopters(patrolHelicopters) { this._patrolHelicopters = patrolHelicopters; }
     get travelingVendors() { return this._travelingVendors; }
     set travelingVendors(travelingVendors) { this._travelingVendors = travelingVendors; }
+    get deepSeas() { return this._deepSeas; }
+    set deepSeas(deepSeas) { this._deepSeas = deepSeas; }
 
     getType(type) {
         if (!Object.values(this.types).includes(type)) {
@@ -130,6 +136,10 @@ class MapMarkers {
 
             case this.types.TravelingVendor: {
                 return this.travelingVendors;
+            } break;
+
+            case this.types.DeepSea: {
+                return this.deepSeas;
             } break;
 
             default: {
@@ -264,6 +274,7 @@ class MapMarkers {
         this.updateVendingMachines(mapMarkers);
         this.updateGenericRadiuses(mapMarkers);
         this.updateTravelingVendors(mapMarkers);
+        this.updateDeepSeas(mapMarkers);
     }
 
     updatePlayers(mapMarkers) {
@@ -781,6 +792,77 @@ class MapMarkers {
         }
     }
 
+    getDeepSeaIdentity(marker) {
+        if (marker.id !== undefined && marker.id !== null) {
+            return `id:${marker.id}`;
+        }
+
+        return `xy:${marker.x}:${marker.y}`;
+    }
+
+    isDeepSeaMarker(marker) {
+        if (!marker || typeof marker !== 'object') {
+            return false;
+        }
+
+        if (marker.type === this.types.DeepSea) {
+            return true;
+        }
+
+        const properties = ['name', 'label', 'token', 'prefab'];
+        for (const property of properties) {
+            if (typeof marker[property] === 'string' && /deep\s*sea/i.test(marker[property])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    updateDeepSeas(mapMarkers) {
+        const incoming = mapMarkers.markers.filter(marker => this.isDeepSeaMarker(marker));
+        const incomingIds = incoming.map(marker => this.getDeepSeaIdentity(marker));
+        const currentIds = this.deepSeas.map(marker => marker._deepSeaIdentity);
+
+        const newMarkers = incoming.filter(marker => !currentIds.includes(this.getDeepSeaIdentity(marker)));
+        const leftMarkers = this.deepSeas.filter(marker => !incomingIds.includes(marker._deepSeaIdentity));
+        const remainingMarkers = incoming.filter(marker => currentIds.includes(this.getDeepSeaIdentity(marker)));
+
+        for (const marker of newMarkers) {
+            const mapSize = this.rustplus.info.correctedMapSize;
+            const pos = Map.getPos(marker.x, marker.y, mapSize, this.rustplus);
+            marker.location = pos;
+            marker._deepSeaIdentity = this.getDeepSeaIdentity(marker);
+            this.deepSeas.push(marker);
+        }
+
+        for (const marker of leftMarkers) {
+            this.deepSeas = this.deepSeas.filter(e => e._deepSeaIdentity !== marker._deepSeaIdentity);
+        }
+
+        for (const marker of remainingMarkers) {
+            const mapSize = this.rustplus.info.correctedMapSize;
+            const pos = Map.getPos(marker.x, marker.y, mapSize, this.rustplus);
+            const deepSea = this.deepSeas.find(e => e._deepSeaIdentity === this.getDeepSeaIdentity(marker));
+            if (!deepSea) {
+                continue;
+            }
+
+            deepSea.x = marker.x;
+            deepSea.y = marker.y;
+            deepSea.location = pos;
+        }
+
+        if (this.deepSeas.length > 0 && this.timeSinceDeepSeaOpened === null) {
+            this.timeSinceDeepSeaOpened = new Date();
+        }
+
+        if (this.deepSeas.length === 0 && leftMarkers.length > 0) {
+            this.timeSinceDeepSeaWasOnMap = new Date();
+            this.timeSinceDeepSeaOpened = null;
+        }
+    }
+
 
 
     /* Timer notification functions */
@@ -865,6 +947,7 @@ class MapMarkers {
         this.genericRadiuses = [];
         this.patrolHelicopters = [];
         this.travelingVendors = [];
+        this.deepSeas = [];
 
         for (const [id, timer] of Object.entries(this.cargoShipEgressTimers)) {
             timer.stop();
@@ -886,6 +969,8 @@ class MapMarkers {
         this.timeSincePatrolHelicopterWasOnMap = null;
         this.timeSincePatrolHelicopterWasDestroyed = null;
         this.timeSinceTravelingVendorWasOnMap = null;
+        this.timeSinceDeepSeaWasOnMap = null;
+        this.timeSinceDeepSeaOpened = null;
 
         this.patrolHelicopterDestroyedLocation = null;
 

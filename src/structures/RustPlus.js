@@ -2692,6 +2692,28 @@ class RustPlus extends RustPlusLib {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
+    getCommandDeepSea() {
+        if (this.mapMarkers.deepSeas.length > 0) {
+            if (this.mapMarkers.timeSinceDeepSeaOpened === null) {
+                return Client.client.intlGet(this.guildId, 'deepSeaNoData');
+            }
+
+            const secondsSinceOpen = (new Date() - this.mapMarkers.timeSinceDeepSeaOpened) / 1000;
+            return Client.client.intlGet(this.guildId, 'deepSeaCurrentlyOpenFor', {
+                time: Timer.secondsToFullScale(secondsSinceOpen)
+            });
+        }
+
+        if (this.mapMarkers.timeSinceDeepSeaWasOnMap !== null) {
+            const secondsSinceDown = (new Date() - this.mapMarkers.timeSinceDeepSeaWasOnMap) / 1000;
+            return Client.client.intlGet(this.guildId, 'deepSeaApproxDownFor', {
+                time: Timer.secondsToFullScale(secondsSinceDown)
+            });
+        }
+
+        return Client.client.intlGet(this.guildId, 'deepSeaNoData');
+    }
+
     getCommandWipe(isInfoChannel = false) {
         if (isInfoChannel) {
             return Client.client.intlGet(this.guildId, 'dayOfWipe', {

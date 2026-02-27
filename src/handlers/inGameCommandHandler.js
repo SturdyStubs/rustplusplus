@@ -75,6 +75,10 @@ module.exports = {
                 commandLowerCase.startsWith(`${prefix}${client.intlGet(guildId, 'commandSyntaxDeaths')}`))) {
             rustplus.sendInGameMessage(await rustplus.getCommandDeath(command, callerSteamId));
         }
+        else if (commandLowerCase === `${prefix}${client.intlGet('en', 'commandSyntaxDeepSea')}` ||
+            commandLowerCase === `${prefix}${client.intlGet(guildId, 'commandSyntaxDeepSea')}`) {
+            rustplus.sendInGameMessage(rustplus.getCommandDeepSea());
+        }
         else if (commandLowerCase.startsWith(`${prefix}${client.intlGet('en', 'commandSyntaxDecay')}`) ||
             commandLowerCase.startsWith(`${prefix}${client.intlGet(guildId, 'commandSyntaxDecay')}`)) {
             rustplus.sendInGameMessage(rustplus.getCommandDecay(command));
