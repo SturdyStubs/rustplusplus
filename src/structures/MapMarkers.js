@@ -71,6 +71,7 @@ class MapMarkers {
 
         /* Event location */
         this.patrolHelicopterDestroyedLocation = null;
+        this.lastDeepSeaSafeZoneLocation = null;
 
         /* Vending Machine variables */
         this.knownVendingMachines = [];
@@ -313,22 +314,31 @@ class MapMarkers {
         let newMarkers = this.getNewMarkersOfTypeXY(this.types.VendingMachine, mapMarkers.markers);
         let leftMarkers = this.getLeftMarkersOfTypeXY(this.types.VendingMachine, mapMarkers.markers);
         let remainingMarkers = this.getRemainingMarkersOfTypeXY(this.types.VendingMachine, mapMarkers.markers);
+        const deepSeaMarkers = mapMarkers.markers.filter(marker => this.isDeepSeaMarker(marker));
+        const deepSeaSafeZoneMaxDistance = 250;
 
         /* VendingMachine markers that are new. */
         for (let marker of newMarkers) {
             let mapSize = this.rustplus.info.correctedMapSize;
             let pos = Map.getPos(marker.x, marker.y, mapSize, this.rustplus);
+            const isDeepSeaSafeZone = deepSeaMarkers.some(deepSeaMarker => {
+                return Map.getDistance(marker.x, marker.y, deepSeaMarker.x, deepSeaMarker.y) <= deepSeaSafeZoneMaxDistance;
+            });
 
             marker.location = pos;
 
             if (!this.rustplus.isFirstPoll) {
-                if (!this.knownVendingMachines.some(e => e.x === marker.x && e.y === marker.y)) {
+                if (!this.knownVendingMachines.some(e => e.x === marker.x && e.y === marker.y) && !isDeepSeaSafeZone) {
                     this.rustplus.sendEvent(
                         this.rustplus.notificationSettings.vendingMachineDetectedSetting,
                         this.client.intlGet(this.rustplus.guildId, 'newVendingMachine', { location: pos.string }),
                         null,
                         Constants.COLOR_NEW_VENDING_MACHINE);
                 }
+            }
+
+            if (isDeepSeaSafeZone) {
+                this.lastDeepSeaSafeZoneLocation = Map.getGridPos(marker.x, marker.y, mapSize) ?? pos.location;
             }
 
             this.knownVendingMachines.push({ x: marker.x, y: marker.y });
@@ -861,11 +871,13 @@ class MapMarkers {
             this.deepSeas.push(marker);
 
             const side = this.getMapSide(marker.x, marker.y, mapSize);
+            const safeZoneLocation = this.lastDeepSeaSafeZoneLocation ??
+                this.client.intlGet(this.rustplus.guildId, 'unknown');
             this.rustplus.sendEvent(
                 this.rustplus.notificationSettings.deepSeaDetectedSetting,
                 this.client.intlGet(this.rustplus.guildId, 'deepSeaOpenedAt', {
                     side: side,
-                    location: pos.string
+                    location: safeZoneLocation
                 }),
                 null,
                 Constants.COLOR_TRAVELING_VENDOR_LOCATED_AT);
@@ -874,9 +886,7 @@ class MapMarkers {
         for (const marker of leftMarkers) {
             this.rustplus.sendEvent(
                 this.rustplus.notificationSettings.deepSeaLeftSetting,
-                this.client.intlGet(this.rustplus.guildId, 'deepSeaClosedAt', {
-                    location: marker.location.string
-                }),
+                this.client.intlGet(this.rustplus.guildId, 'deepSeaClosedAt'),
                 null,
                 Constants.COLOR_TRAVELING_VENDOR_LEFT_MAP);
             this.deepSeas = this.deepSeas.filter(e => e._deepSeaIdentity !== marker._deepSeaIdentity);
@@ -902,6 +912,7 @@ class MapMarkers {
         if (this.deepSeas.length === 0 && leftMarkers.length > 0) {
             this.timeSinceDeepSeaWasOnMap = new Date();
             this.timeSinceDeepSeaOpened = null;
+            this.lastDeepSeaSafeZoneLocation = null;
         }
     }
 
@@ -1015,6 +1026,7 @@ class MapMarkers {
         this.timeSinceDeepSeaOpened = null;
 
         this.patrolHelicopterDestroyedLocation = null;
+        this.lastDeepSeaSafeZoneLocation = null;
 
         this.knownVendingMachines = [];
         this.subscribedItemsId = [];
